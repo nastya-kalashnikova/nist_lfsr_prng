@@ -22,7 +22,10 @@ displayGeneratorOptions()
 	printf("    [2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
 	printf("    [4] Cubic Congruential         [5] XOR\n");
 	printf("    [6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
-	printf("    [8] Micali-Schnorr             [9] G Using SHA-1\n\n");
+	printf("    [8] Micali-Schnorr             [9] G Using SHA-1\n");
+	printf("    [10] AKalashnikova G Using Fibonacci LFSR\n");
+	printf("    [11] AKalashnikova G Using Galois Right LFSR\n");
+	printf("    [12] AKalashnikova G Using Galois Left LFSR\n\n");
 	printf("   Enter Choice: ");
 	scanf("%d", &option);
 	printf("\n\n");
@@ -81,12 +84,12 @@ generatorOptions(char** streamFile)
 			case 9:
 				*streamFile = "G using SHA-1";
 				break;
-				
-			/* INTRODUCE NEW PRNG NAMES HERE */
-			/*
-			case 10:  *streamFile = "myNewPRNG";
+			case 10:  *streamFile = "AKalashnikova-G-Using-Fibonacci-LFSR";
 				break;
-			*/
+			case 11:  *streamFile = "AKalashnikova-G-Using-Galois-Right-LFSR";
+				break;
+			case 12:  *streamFile = "AKalashnikova-G-Using-Galois-Left-LFSR";
+				break;
 			default:
 				printf("Error:  Out of range - Try again!\n");
 				break;
@@ -448,6 +451,15 @@ invokeTestSuite(int option, char *streamFile)
 			break;
 		case 9:
 			SHA1();
+			break;
+		case 10:
+            AKalashnikovaFibonacciLFSR();
+			break;
+		case 11:
+            AKalashnikovaGaloisRightLFSR();
+			break;
+		case 12:
+            AKalashnikovaGaloisLeftLFSR();
 			break;
 			
 		/* INTRODUCE NEW PSEUDO RANDOM NUMBER GENERATORS HERE */
