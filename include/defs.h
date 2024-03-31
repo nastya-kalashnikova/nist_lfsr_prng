@@ -21,10 +21,10 @@
                          G L O B A L  C O N S T A N T S
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define ALPHA							0.01	/* SIGNIFICANCE LEVEL */
+#define ALPHA							0.001	/* SIGNIFICANCE LEVEL */
 #define MAXNUMOFTEMPLATES				148		/* APERIODIC TEMPLATES: 148=>temp_length=9 */
 #define NUMOFTESTS						15		/* MAX TESTS DEFINED  */
-#define NUMOFGENERATORS					10		/* MAX PRNGs */
+#define NUMOFGENERATORS					13		/* MAX PRNGs */
 #define MAXFILESPERMITTEDFORPARTITION	148
 #define	TEST_FREQUENCY					1
 #define	TEST_BLOCK_FREQUENCY			2

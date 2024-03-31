@@ -56,7 +56,7 @@ lcg()
 		exit(1);
 	}
 	counter = 1;
- 
+
 	for ( v=0; v<tp.numOfBitStreams; v++ ) {
 		num_0s = 0;
 		num_1s = 0;
@@ -295,7 +295,7 @@ bbs()
 	ahtopb("10d6333cfac8e30e808d2192f7c0439480da79db9bbca1667d73be9a677ed31311f3b830937763837cb7b1b1dc75f14eea417f84d9625628750de99e7ef1e976", s, 64);
 	memset(x, 0x00, 256);
 	ModSqr(x, s, 64, n, 128);
- 
+
 	for ( v=0; v<tp.numOfBitStreams; v++ ) {
 		num_0s = 0;
 		num_1s = 0;
@@ -452,5 +452,181 @@ SHA1()
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
 		nist_test_suite();
 	}
+	free(epsilon);
+}
+
+#include <stdint.h>
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  ((byte) & 0x80 ? '1' : '0'), \
+  ((byte) & 0x40 ? '1' : '0'), \
+  ((byte) & 0x20 ? '1' : '0'), \
+  ((byte) & 0x10 ? '1' : '0'), \
+  ((byte) & 0x08 ? '1' : '0'), \
+  ((byte) & 0x04 ? '1' : '0'), \
+  ((byte) & 0x02 ? '1' : '0'), \
+  ((byte) & 0x01 ? '1' : '0')
+
+// Працюємо з 64-бітовим регістром зсуву та відвідною послідовністю [59, 60, 62, 63].
+//ULONG LFSR_GAMMA = 0xec822a619d6ed5d9; // initialize LFSR register
+//ULONG LFSR_GAMMA = 0xaaaaaaaaaaaaaaaa; // initialize LFSR register
+ULONG LFSR_GAMMA =   0x0af944215c1040f7; // initialize LFSR register by Prime numbers:
+                                         // 0x0f6b75ab2bc471c7
+                                         // 0x0c9dbd5d80e68ba3
+                                         // 0x0aaaaaaaaaaaaaab
+void
+AKalashnikovaFibonacciLFSR()
+{
+	int j, k, num_0s, num_1s, bitsRead, done;
+	BYTE *pB;
+
+	if ( (epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+		printf("Insufficient memory available.\n");
+		exit(1);
+	}
+
+	/*
+	char buff[64] = "prettyprintBstr title > ";
+   	BYTE tmp[8];
+	ahtopb("416e617374617369", tmp, 8);
+	prettyprintBstr(buff, tmp, 8); // print N bytes in HEX
+	*/
+	printf("..................................................\n");
+
+	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+		num_0s = 0;
+		num_1s = 0;
+		bitsRead = 0;
+		done = 0;
+		do {
+			//printf("LFSR_GAMMA hex = 0x%lx\n", LFSR_GAMMA);
+			unsigned char h = (uint8_t)((LFSR_GAMMA>>(64-8))&0xFF); // LFSR_GAMMA & 0xFF00000000000000u
+			done = convertToBits(&h, 8, tp.n, &num_0s, &num_1s, &bitsRead);
+			// Fails: 'igamc: UNDERFLOW' + LinearComplexity, ~5m
+
+		   	//pB = (BYTE *)&LFSR_GAMMA;  // LFSR_GAMMA & 0x00000000000000FFu
+			//printf("		 h hex = 0x%0x\n", *pB);
+			//done = convertToBits(pB, 8, tp.n, &num_0s, &num_1s, &bitsRead);
+			// Fails: 'igamc: UNDERFLOW' + 3 fails, ~5m
+
+			for ( j=0; j<8; j++ )
+			{
+				/* taps:  64, 4, 3, 1, 0 ; feedback polynomial: x^4 + x^3 + x^1 + 1 */
+				// Генеруємо біт Зворотнього зв'язку:
+				ULONG feedback_bit = ((LFSR_GAMMA >> 0) ^ (LFSR_GAMMA >> 1) ^ (LFSR_GAMMA >> 3) ^ (LFSR_GAMMA >> 4) ^ (LFSR_GAMMA >> 63)) & 1u;
+				LFSR_GAMMA <<= 1;
+				LFSR_GAMMA |= feedback_bit;
+			}
+		} while ( !done );
+		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
+		nist_test_suite();
+	}
+
+	free(epsilon);
+}
+
+void
+AKalashnikovaGaloisRightLFSR()
+{
+	int j, k, num_0s, num_1s, bitsRead, done;
+	BYTE *pB;
+
+	if ( (epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+		printf("Insufficient memory available.\n");
+		exit(1);
+	}
+
+	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+		num_0s = 0;
+		num_1s = 0;
+		bitsRead = 0;
+		done = 0;
+		do {
+			//printf("LFSR_GAMMA hex = 0x%lx\n", LFSR_GAMMA);
+		   	pB = (BYTE *)&LFSR_GAMMA; // LFSR_GAMMA & 0x00000000000000FFu
+			*pB ^= 1;
+			//printf("		 h hex = 0x%0x\n", *pB);
+			done = convertToBits(pB, 8, tp.n, &num_0s, &num_1s, &bitsRead);
+			// Fails: depends on Initial value - Rank, 2 x NonOverlappingTemplate, 7m48s
+
+			for ( j=0; j<8; j++ )
+			{
+				ULONG feedback_bit = LFSR_GAMMA & 1u;  // Get LSB (i.e., the output bit).
+				//LFSR_GAMMA >>= 1;					   // Shift register.
+				//if (feedback_bit)					   // If the output bit is 1,
+					LFSR_GAMMA ^= 0xD800000000000000u; //	 apply toggle mask.
+					// 1101100000000000000000000000000000000000000000000000000000000000
+
+                // This value is then negated (two's complement negation), which creates a value of either all 0s or all 1s, if the output bit is 0 or 1, respectively. By ANDing the result with the tap-value (e.g., 0xB400 in the second example) before applying it as the toggle mask, it acts functionally as a conditional to either apply or not apply the toggle mask based on the output bit.
+                LFSR_GAMMA = (LFSR_GAMMA >> 1) ^ (-feedback_bit & 0xD800000000000000u);
+
+				// https://en.wikipedia.org/wiki/Linear-feedback_shift_register
+				// The branch if (lsb) lfsr ^= 0xB400u;can also be written as lfsr ^= (-lsb) & 0xB400u; which may produce more efficient code on some compilers. In addition, the left-shifting variant may produce even better code, as the msb is the carry from the addition of lfsr to itself.
+				//  LFSR_GAMMA ^= (-feedback_bit) & 0xD800000000000000u;
+			}
+		} while ( !done );
+		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
+		nist_test_suite();
+	}
+
+	free(epsilon);
+}
+
+void
+AKalashnikovaGaloisLeftLFSR()
+{
+	int j, k, num_0s, num_1s, bitsRead, done;
+	BYTE *pB;
+
+	if ( (epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+		printf("Insufficient memory available.\n");
+		exit(1);
+	}
+
+	printf("LFSR_GAMMA = %lu\n", LFSR_GAMMA);
+	printf("LFSR_GAMMA hex = 0x%lx\n", LFSR_GAMMA);
+	printf("..................................................\n");
+	printf("   5 bin = "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(5));			// 00000101
+	printf("   5 hex = 0x%08x\n", 5);											// 0x00000005
+	printf("  -5 bin = "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY((int)-5));	// 11111011
+	printf("  -5 hex = 0x%08x\n", (int)-5);										// 0xfffffffb
+	printf("..................................................\n");
+
+	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+		num_0s = 0;
+		num_1s = 0;
+		bitsRead = 0;
+		done = 0;
+		do {
+/*			
+ 			printf("  LFSR_GAMMA hex = 0x%lx\n", LFSR_GAMMA);				  // 0x416e617374617369
+		   	BYTE* tmp = (unsigned char *)&LFSR_GAMMA;
+			prettyprintBstr('\0', tmp, 8); // print N bytes in HEX as in Memory: 69736174 73616E41
+			printf("	?0 = 0x%0x\n", *(unsigned char *)&LFSR_GAMMA);
+			printf("	?1 = 0x%0x\n", *((unsigned char *)(&LFSR_GAMMA) + 1));
+			printf("	?2 = 0x%0x\n", *((unsigned char *)(&LFSR_GAMMA) + 2));
+			printf("	?3 = 0x%0x\n", *((unsigned char *)(&LFSR_GAMMA) + 3));
+			printf("	?4 = 0x%0x\n", *((unsigned char *)(&LFSR_GAMMA) + 4));
+			printf("..................................................\n");
+*/
+		   	pB = (BYTE *)&LFSR_GAMMA; // LFSR_GAMMA & 0x00000000000000FFu
+			*pB ^= 1;
+			//printf("		 h hex = 0x%0x\n", *pB);
+			done = convertToBits(pB, 8, tp.n, &num_0s, &num_1s, &bitsRead);
+			// Fails: none, 7m50s
+
+			for ( j=0; j<8; j++ )
+			{
+				uint64_t feedback_bit = (int64_t)LFSR_GAMMA < 0;	  // Get MSB (i.e., the output bit).
+				LFSR_GAMMA <<= 1;									  // Shift register.
+				if (feedback_bit)									  // If the output bit is 1,
+					LFSR_GAMMA ^= 0x000000000000001Bu;				  //	 apply toggle mask.
+					// 0000000000000000000000000000000000000000000000000000000000011011
+			}
+		} while ( !done );
+		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
+		nist_test_suite();
+	}
+
 	free(epsilon);
 }

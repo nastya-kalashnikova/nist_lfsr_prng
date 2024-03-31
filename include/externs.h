@@ -13,5 +13,5 @@ extern FILE			*freqfp;				// FILE OUTPUT STREAM
 extern FILE			*summary;				// FILE OUTPUT STREAM
 extern int			testVector[NUMOFTESTS+1];
 
-extern char	generatorDir[NUMOFGENERATORS][20];
+extern char	generatorDir[NUMOFGENERATORS][32];
 extern char	testNames[NUMOFTESTS+1][32];
